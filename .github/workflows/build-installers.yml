@@ -1,0 +1,54 @@
+name: Build installers
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+      - name: Build
+        run: |
+          python packaging/make_icon.py
+          pyinstaller --noconfirm he-en-fixer.spec
+          powershell -File packaging/stage_windows.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HE-EN-Fixer-Windows
+          path: release/HE-EN-Fixer-Windows.zip
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+      - name: Build
+        run: |
+          python packaging/make_icon.py
+          pyinstaller --noconfirm he-en-fixer.spec
+          chmod +x packaging/stage_macos.sh
+          packaging/stage_macos.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HE-EN-Fixer-macOS
+          path: release/HE-EN-Fixer-macOS.zip
