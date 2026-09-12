@@ -1,0 +1,25 @@
+---
+description: Rebuild the HE-EN Fixer installer on every commit and push
+alwaysApply: true
+---
+
+# Update install on commit and push
+
+Whenever the user asks to **commit** and/or **push**, rebuild the packaged installer in the same turn. Do not skip this because the diff looks small.
+
+## Before commit
+
+1. Run `packaging\build_windows.ps1` from the repo root (creates `release\HE-EN-Fixer-Windows.zip`).
+2. If that script fails, fix it before committing. Do not commit a broken installer pipeline.
+3. Do **not** stage `dist/`, `build/`, or `release/` — they stay gitignored. The zip is local; GitHub Actions is the shared install.
+
+## After push to `main`
+
+- The **Build installers** workflow must run on that push (Windows + macOS zips as artifacts).
+- Tell the user the fresh install is in Actions artifacts: `HE-EN-Fixer-Windows` and `HE-EN-Fixer-macOS`.
+
+## Do not
+
+- Push without rebuilding when this machine can run the Windows pack script.
+- Commit installer binaries into git.
+- Ask whether to rebuild; it is required.
