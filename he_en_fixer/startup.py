@@ -52,7 +52,9 @@ def _set_windows(enabled: bool) -> None:
         return
     STARTUP_DIR.mkdir(parents=True, exist_ok=True)
     target, args, workdir = launch_target()
-    _create_windows_shortcut(path, target, args, workdir)
+    from .icon import icon_ico_path
+
+    _create_windows_shortcut(path, target, args, workdir, icon=icon_ico_path())
 
 
 def _set_macos(enabled: bool) -> None:
@@ -101,13 +103,19 @@ def _ps_escape(value: str) -> str:
     return value.replace("'", "''")
 
 
-def _create_windows_shortcut(path: Path, target: str, args: str, workdir: str) -> None:
+def _create_windows_shortcut(
+    path: Path, target: str, args: str, workdir: str, icon: Path | None = None
+) -> None:
+    icon_line = ""
+    if icon is not None and icon.exists():
+        icon_line = f"$sc.IconLocation = '{_ps_escape(str(icon))},0'; "
     script = (
         "$ws = New-Object -ComObject WScript.Shell; "
         f"$sc = $ws.CreateShortcut('{_ps_escape(str(path))}'); "
         f"$sc.TargetPath = '{_ps_escape(target)}'; "
         f"$sc.Arguments = '{_ps_escape(args)}'; "
         f"$sc.WorkingDirectory = '{_ps_escape(workdir)}'; "
+        f"{icon_line}"
         "$sc.WindowStyle = 7; "
         "$sc.Save()"
     )
@@ -118,10 +126,10 @@ def _create_windows_shortcut(path: Path, target: str, args: str, workdir: str) -
     )
 
 
-def create_shortcut(path: Path, target: str, args: str, workdir: str) -> None:
+def create_shortcut(path: Path, target: str, args: str, workdir: str, icon: Path | None = None) -> None:
     if sys.platform == "win32":
         path.parent.mkdir(parents=True, exist_ok=True)
-        _create_windows_shortcut(path, target, args, workdir)
+        _create_windows_shortcut(path, target, args, workdir, icon=icon)
         return
     path.parent.mkdir(parents=True, exist_ok=True)
     body = "#!/bin/bash\n"

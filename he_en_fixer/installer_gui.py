@@ -7,6 +7,9 @@ import threading
 import tkinter as tk
 from tkinter import ttk
 
+from PIL import ImageTk
+
+from .icon import icon_ico_path, load_icon
 from .install import InstallOptions, install, is_installed, launch_app, uninstall
 from .paths import APP_NAME, install_dir
 
@@ -24,16 +27,29 @@ def run_installer() -> int:
     root.resizable(False, False)
     root.configure(bg="#f4f6fb")
 
-    pad = {"padx": 24, "pady": 6}
     frame = ttk.Frame(root, padding=8)
     frame.pack(fill=tk.BOTH, expand=True)
 
-    ttk.Label(frame, text=APP_NAME, font=("Segoe UI", 18, "bold")).pack(anchor="w", **pad)
+    ico = icon_ico_path()
+    if ico is not None:
+        try:
+            root.iconbitmap(str(ico))
+        except tk.TclError:
+            pass
+
+    header = ttk.Frame(frame)
+    header.pack(anchor="w", padx=24, pady=(8, 4), fill=tk.X)
+    photo = ImageTk.PhotoImage(load_icon(72))
+    root._app_icon = photo
+    ttk.Label(header, image=photo).pack(side=tk.LEFT, padx=(0, 14))
+    titles = ttk.Frame(header)
+    titles.pack(side=tk.LEFT, fill=tk.X)
+    ttk.Label(titles, text=APP_NAME, font=("Segoe UI", 18, "bold")).pack(anchor="w")
     ttk.Label(
-        frame,
+        titles,
         text="Hebrew ↔ English keyboard fixer",
         font=("Segoe UI", 10),
-    ).pack(anchor="w", padx=24)
+    ).pack(anchor="w")
 
     for line in SAFE_POINTS:
         ttk.Label(frame, text=f"•  {line}", wraplength=460, justify="left").pack(

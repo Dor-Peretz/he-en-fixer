@@ -3,6 +3,10 @@ import sys
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 datas = collect_data_files("wordfreq") + collect_data_files("langcodes")
+datas += [
+    ("he_en_fixer/assets/icon.png", "he_en_fixer/assets"),
+    ("he_en_fixer/assets/icon.ico", "he_en_fixer/assets"),
+]
 hidden = (
     collect_submodules("wordfreq")
     + collect_submodules("pynput")
@@ -51,7 +55,7 @@ exe = EXE(
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=sys.platform == "darwin",
-    icon="packaging/icon.ico" if sys.platform == "win32" else None,
+    icon="he_en_fixer/assets/icon.ico" if sys.platform == "win32" else "he_en_fixer/assets/icon.png",
 )
 coll = COLLECT(
     exe,
@@ -65,7 +69,7 @@ if sys.platform == "darwin":
     app = BUNDLE(
         coll,
         name="HE-EN Fixer.app",
-        icon=None,
+        icon="he_en_fixer/assets/icon.png",
         bundle_identifier="com.heenfixer.app",
         info_plist={
             "LSUIElement": True,

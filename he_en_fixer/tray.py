@@ -6,28 +6,12 @@ import subprocess
 import sys
 
 import pystray
-from PIL import Image, ImageDraw, ImageFont
 
 from . import startup
 from .config import Settings, save_settings
 from .hook import KeyboardFixer
+from .icon import load_icon
 from .paths import is_frozen, project_root
-
-
-def _icon_image() -> Image.Image:
-    size = 64
-    image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(image)
-    draw.rounded_rectangle((2, 2, size - 3, size - 3), radius=14, fill=(28, 36, 56, 255))
-    draw.rounded_rectangle((6, 6, size - 7, size - 7), radius=12, fill=(47, 92, 168, 255))
-    try:
-        font_name = "segoeui.ttf" if sys.platform == "win32" else "Helvetica.ttc"
-        font = ImageFont.truetype(font_name, 22)
-    except OSError:
-        font = ImageFont.load_default()
-    draw.text((10, 16), "A", font=font, fill="white")
-    draw.text((34, 14), "א", font=font, fill=(255, 214, 90, 255))
-    return image
 
 
 def _hotkey_hint() -> str:
@@ -42,7 +26,7 @@ class TrayApp:
         self.fixer = KeyboardFixer(settings)
         self.icon = pystray.Icon(
             "he-en-fixer",
-            _icon_image(),
+            load_icon(64),
             "HE↔EN Fixer",
             menu=pystray.Menu(
                 pystray.MenuItem(

@@ -1,6 +1,10 @@
-# HE↔EN Fixer
+<p align="center">
+  <img src="he_en_fixer/assets/icon.png" width="168" alt="HE↔EN Fixer icon">
+</p>
 
-A small local app for Windows and Mac. It watches what you type and fixes the classic mistake: you meant **English**, but the keyboard was still on **Hebrew** (or the other way around).
+<h1 align="center">HE↔EN Fixer</h1>
+
+<p align="center">A local tray app for Windows and Mac that fixes the classic mistake: you meant <strong>English</strong>, but the keyboard was still on <strong>Hebrew</strong> — or the other way around.</p>
 
 Example: Hebrew layout is on, you type `hello`, the screen shows `יקךךם`. When you press Space, Enter, or Tab, the app rewrites it to `hello`.
 
@@ -46,7 +50,7 @@ That copies the app into your user folder and can add a desktop shortcut.
 
 ## How to use it
 
-After install, a tray icon appears (`A א`). Leave it running while you type.
+After install, the tray icon above appears in the system tray. Leave it running while you type.
 
 **Auto-fix** runs when you finish a word (Space, Enter, or Tab).
 

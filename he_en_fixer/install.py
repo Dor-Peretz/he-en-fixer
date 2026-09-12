@@ -68,12 +68,19 @@ def install(options: InstallOptions, progress=None) -> Path:
     (dest / "installed.json").write_text(json.dumps(marker, indent=2) + "\n", encoding="utf-8")
 
     target, args, workdir = launch_target()
+    icon = dest / "he_en_fixer" / "assets" / "icon.ico"
+    if not icon.exists():
+        icon = dest / f"{APP_NAME}.exe" if (dest / f"{APP_NAME}.exe").exists() else None
     if options.desktop_shortcut:
         _log(progress, "Creating desktop shortcut")
-        startup.create_shortcut(desktop_dir() / _launcher_name(), target, args, workdir)
+        startup.create_shortcut(
+            desktop_dir() / _launcher_name(), target, args, workdir, icon=icon
+        )
     if options.start_menu:
         _log(progress, "Adding to Start Menu / Applications")
-        startup.create_shortcut(start_menu_dir() / _launcher_name(), target, args, workdir)
+        startup.create_shortcut(
+            start_menu_dir() / _launcher_name(), target, args, workdir, icon=icon
+        )
     if options.start_at_login:
         _log(progress, "Enabling start at login")
         startup.set_enabled(True)
