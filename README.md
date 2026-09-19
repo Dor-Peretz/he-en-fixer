@@ -6,7 +6,7 @@
 
 <p align="center">A local tray app for Windows and Mac that fixes the classic mistake: you meant <strong>English</strong>, but the keyboard was still on <strong>Hebrew</strong> — or the other way around.</p>
 
-Example: Hebrew layout is on, you type `hello`, the screen shows `יקךךם`. When you press Space, Enter, or Tab, the app rewrites it to `hello`.
+Example: Hebrew layout is on, you type `hello`, the screen shows `יקךךם`. A moment after you stop typing, the app rewrites it to `hello` and switches your keyboard to English, so you can keep going.
 
 Real words are left alone. `שלום` and `אם` stay Hebrew. `hello` and `to` stay English.
 
@@ -52,13 +52,18 @@ That copies the app into your user folder and can add a desktop shortcut.
 
 After install, the tray icon above appears in the system tray. Leave it running while you type.
 
-**Auto-fix** runs when you finish a word (Space, Enter, or Tab).
+**Auto-fix waits until you stop typing.** Nothing changes while your fingers are moving. About a second after your last keystroke, everything you just typed is corrected at once, and your keyboard switches to the language you meant to be typing in.
 
-**Force convert** if auto-fix misses a name or a rare word:
+Two things to know:
+
+- Press **Enter before pausing and nothing is fixed** — in chat apps Enter has already sent the message, so there is no text left to correct. Pause for a moment first, or use the force-convert shortcut below.
+- The language switch only happens when something was actually corrected.
+
+**Force convert** if auto-fix misses a name or a rare word, or if you don't want to wait:
 
 | | Windows | Mac |
 |---|---|---|
-| Convert current word | **Ctrl+Space**, **Pause**, or **F9** | **Ctrl+Shift+Space** or **F9** |
+| Convert what you just typed | **Ctrl+Space**, **Pause**, or **F9** | **Ctrl+Shift+Space** or **F9** |
 | Convert selected text | Same shortcut, with text selected | Same |
 
 On a Mac, Ctrl+Space is not used, so it does not steal the language-switch shortcut.
@@ -67,12 +72,35 @@ Right-click the tray icon to:
 
 - Turn the fixer on or off
 - Turn auto-fix on or off
+- Turn the keyboard-language switch on or off
 - Allow only Hebrew → English, only English → Hebrew, or both
 - Start when you log in
-- Open the install / uninstall window
+- Open **Settings…** or the install / uninstall window
 - Quit
 
 Turn it off from the tray before passwords, games, or mixed-language typing you want left as-is.
+
+---
+
+## Settings
+
+Tray icon → **Settings…** opens a small window for everything you can tune:
+
+| Setting | What it does |
+|---|---|
+| Fixer is on | Master switch |
+| Fix what I typed when I stop typing | Turns auto-fix off without stopping the app |
+| How long to wait | Pause length before a fix runs, from 0.3 to 3 seconds (default 1.2) |
+| Switch my keyboard… | Change the input language after a correction |
+| Allowed corrections | Hebrew → English, English → Hebrew, or both |
+| Start when I log in | Launch the app at login |
+
+Saving applies immediately — the running app picks the change up, so there is no need to restart it.
+
+Settings are stored as plain JSON, if you prefer editing by hand:
+
+- Windows: `%APPDATA%\he-en-fixer\settings.json`
+- Mac: `~/Library/Application Support/he-en-fixer/settings.json`
 
 ---
 
@@ -123,6 +151,19 @@ Or with a console window:
 
 ```bat
 run-debug.bat
+```
+
+On a Mac:
+
+```bash
+.venv/bin/python main.py
+```
+
+Open a window on its own, without the tray running:
+
+```bash
+.venv/bin/python main.py --settings
+.venv/bin/python main.py --setup
 ```
 
 Preview a conversion without installing the keyboard hook:

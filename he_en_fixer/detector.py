@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
 from dataclasses import dataclass
 
 from .mapping import dominant_script, en_to_he, he_to_en, script_counts
@@ -86,6 +87,38 @@ def suggest_auto(text: str, *, he_to_en_enabled: bool = True, en_to_he_enabled: 
                 return Suggestion(text, mapped, "en_to_he", orig, new)
 
     return None
+
+
+@dataclass(frozen=True)
+class BurstFix:
+    text: str
+    direction: str | None  # "he_to_en" | "en_to_he" | None when nothing changed
+
+
+def fix_burst(text: str, *, he_to_en_enabled: bool = True, en_to_he_enabled: bool = True) -> BurstFix:
+    """Correct every wrong-layout word in a burst of typing, keeping spacing intact.
+
+    The reported direction is the one that applied to most words, so the caller can
+    switch the keyboard to the language the user was actually aiming for.
+    """
+    directions: list[str] = []
+
+    def replace(match: re.Match[str]) -> str:
+        token = match.group(0)
+        suggestion = suggest_auto(
+            token,
+            he_to_en_enabled=he_to_en_enabled,
+            en_to_he_enabled=en_to_he_enabled,
+        )
+        if suggestion is None:
+            return token
+        directions.append(suggestion.direction)
+        return suggestion.replacement
+
+    fixed = _WORD_RE.sub(replace, text)
+    if not directions:
+        return BurstFix(text, None)
+    return BurstFix(fixed, Counter(directions).most_common(1)[0][0])
 
 
 def convert_document(text: str, *, he_to_en_enabled: bool = True, en_to_he_enabled: bool = True, force: bool = False) -> str:

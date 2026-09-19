@@ -10,6 +10,10 @@ def main() -> int:
         from he_en_fixer.installer_gui import run_installer
 
         return run_installer()
+    if "--settings" in sys.argv:
+        from he_en_fixer.settings_gui import run_settings
+
+        return run_settings()
     if "--uninstall" in sys.argv:
         from he_en_fixer.install import uninstall
 

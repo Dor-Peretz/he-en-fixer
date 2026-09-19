@@ -16,9 +16,11 @@ hidden = (
         "tkinter.ttk",
         "he_en_fixer",
         "he_en_fixer.installer_gui",
+        "he_en_fixer.settings_gui",
         "he_en_fixer.install",
         "he_en_fixer.injector_win",
         "he_en_fixer.injector_generic",
+        "he_en_fixer.layout_switch",
         "PIL._tkinter_finder",
     ]
 )

@@ -18,6 +18,9 @@ class Settings:
     he_to_en: bool = True
     en_to_he: bool = True
     min_word_length: int = 2
+    # Seconds of no typing before the burst is corrected.
+    idle_fix_delay: float = 1.2
+    switch_layout: bool = True
     start_with_windows: bool = False
     convert_hotkey: str = "<ctrl>+<space>"
 
