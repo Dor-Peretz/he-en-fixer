@@ -17,10 +17,10 @@ except ImportError:  # pragma: no cover
 
 _WORD_RE = re.compile(r"[A-Za-z\u0590-\u05FF';]+")
 
-# zipf >= ~3.2 is a reasonably common word.
-MIN_TARGET_WORD = 3.2
-# If the typed token is already a real word in its script, never auto-fix it.
-TYPED_REAL_WORD = 3.5
+# zipf >= this is a reasonably common word in wordfreq.
+REAL_WORD_ZIPF = 3.2
+# The other layout must be clearly better, not a near-tie.
+MIN_SCORE_GAP = 0.4
 
 
 @dataclass(frozen=True)
@@ -41,6 +41,24 @@ def _zipf(word: str, lang: str) -> float:
 
 def _letters_only(text: str) -> str:
     return "".join(ch for ch in text if ch.isalpha() or ch in "'")
+
+
+def _looks_like_word(score: float) -> bool:
+    return score >= REAL_WORD_ZIPF
+
+
+def _should_auto_remap(original_score: float, replacement_score: float) -> bool:
+    """Auto-fix only when the typed token is gibberish and the other layout is a word.
+
+    Some physical-key sequences are real words in *both* languages after remap
+    (אם↔to, כשבא↔fact, dusk↔גודל). Leave those as typed; force-convert can still
+    flip them.
+    """
+    if not _looks_like_word(replacement_score):
+        return False
+    if _looks_like_word(original_score):
+        return False
+    return replacement_score > original_score + MIN_SCORE_GAP
 
 
 def toggle_layout(text: str) -> str:
@@ -75,7 +93,7 @@ def suggest_auto(text: str, *, he_to_en_enabled: bool = True, en_to_he_enabled: 
         if mapped != text:
             orig = _zipf(letters, "he")
             new = _zipf(_letters_only(mapped), "en")
-            if orig < TYPED_REAL_WORD and new >= MIN_TARGET_WORD and new > orig + 0.4:
+            if _should_auto_remap(orig, new):
                 return Suggestion(text, mapped, "he_to_en", orig, new)
 
     if en_to_he_enabled and en_count > 0 and en_count >= he_count:
@@ -83,7 +101,7 @@ def suggest_auto(text: str, *, he_to_en_enabled: bool = True, en_to_he_enabled: 
         if mapped != text:
             orig = _zipf(letters, "en")
             new = _zipf(_letters_only(mapped), "he")
-            if orig < TYPED_REAL_WORD and new >= MIN_TARGET_WORD and new > orig + 0.4:
+            if _should_auto_remap(orig, new):
                 return Suggestion(text, mapped, "en_to_he", orig, new)
 
     return None

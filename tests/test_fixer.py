@@ -52,6 +52,23 @@ class DetectorTests(unittest.TestCase):
         self.assertIsNone(suggest_auto("hello"))
         self.assertIsNone(suggest_auto("to"))
 
+    def test_leaves_words_that_are_real_in_both_layouts(self) -> None:
+        # Typed Hebrew that is also a real English word on the other layout.
+        self.assertIsNone(suggest_auto("אם"))  # to
+        self.assertIsNone(suggest_auto("גם"))  # do
+        self.assertIsNone(suggest_auto("עם"))  # go
+        self.assertIsNone(suggest_auto("דם"))  # so
+        self.assertIsNone(suggest_auto("כשבא"))  # fact
+        self.assertIsNone(suggest_auto("פורק"))  # pure
+        # Typed English that is also a real Hebrew word on the other layout.
+        self.assertIsNone(suggest_auto("to"))
+        self.assertIsNone(suggest_auto("do"))
+        self.assertIsNone(suggest_auto("go"))
+        self.assertIsNone(suggest_auto("so"))
+        self.assertIsNone(suggest_auto("fact"))
+        self.assertIsNone(suggest_auto("dusk"))  # גודל
+        self.assertIsNone(suggest_auto("nv"))  # מה
+
     def test_auto_fixes_english_gibberish_to_hebrew(self) -> None:
         suggestion = suggest_auto("akuo")
         self.assertIsNotNone(suggestion)
@@ -66,6 +83,10 @@ class DetectorTests(unittest.TestCase):
     def test_convert_sentence(self) -> None:
         text = "יקךךם 'םרךג"
         self.assertEqual(convert_document(text), "hello world")
+
+    def test_convert_document_leaves_bilingual_words(self) -> None:
+        self.assertEqual(convert_document("אם כשבא יקךךם"), "אם כשבא hello")
+        self.assertEqual(convert_document("to fact akuo"), "to fact שלום")
 
 
 class BurstTests(unittest.TestCase):
