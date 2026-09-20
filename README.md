@@ -90,7 +90,7 @@ Tray icon → **Settings…** opens a small window for everything you can tune:
 |---|---|
 | Fixer is on | Master switch |
 | Fix what I typed when I stop typing | Turns auto-fix off without stopping the app |
-| How long to wait | Pause length before a fix runs, from 0.3 to 3 seconds (default 1.2) |
+| How long to wait | Pause length before a fix runs, from 0.3 to 3 seconds (default 1.2). **Calibrate from my typing…** times the gaps between your letters and words and sets this for you. |
 | Switch my keyboard… | Change the input language after a correction |
 | Allowed corrections | Hebrew → English, English → Hebrew, or both |
 | Start when I log in | Launch the app at login |

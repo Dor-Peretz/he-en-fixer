@@ -2,18 +2,24 @@
 
 from __future__ import annotations
 
+import time
 import tkinter as tk
 from tkinter import ttk
 
 from PIL import ImageTk
 
 from . import startup
+from .calibrate import (
+    CALIBRATE_SENTENCE,
+    MAX_IDLE_FIX_DELAY,
+    MIN_IDLE_FIX_DELAY,
+    CalibrationError,
+    CalibrationResult,
+    delay_from_typing,
+)
 from .config import load_settings, save_settings
 from .icon import icon_ico_path, load_icon
 from .paths import APP_NAME
-
-MIN_DELAY = 0.3
-MAX_DELAY = 3.0
 
 
 def _delay_text(seconds: float) -> str:
@@ -83,12 +89,29 @@ def run_settings() -> int:
 
     ttk.Scale(
         delay_box,
-        from_=MIN_DELAY,
-        to=MAX_DELAY,
+        from_=MIN_IDLE_FIX_DELAY,
+        to=MAX_IDLE_FIX_DELAY,
         orient=tk.HORIZONTAL,
         variable=delay,
         command=on_delay,
     ).pack(fill=tk.X)
+
+    def open_calibrate() -> None:
+        result = _run_calibrate_dialog(root)
+        if result is None:
+            return
+        delay.set(result.idle_fix_delay)
+        delay_label.configure(text=_delay_text(delay.get()))
+        status.set(
+            f"Wait set to {result.idle_fix_delay:.1f}s from your typing. "
+            "Click Save to keep it."
+        )
+
+    ttk.Button(
+        delay_box,
+        text="Calibrate from my typing…",
+        command=open_calibrate,
+    ).pack(anchor="w", pady=(8, 0))
 
     ttk.Checkbutton(
         frame,
@@ -117,7 +140,9 @@ def run_settings() -> int:
         settings.switch_layout = switch_layout.get()
         settings.he_to_en = he_to_en.get()
         settings.en_to_he = en_to_he.get()
-        settings.idle_fix_delay = round(max(MIN_DELAY, min(MAX_DELAY, delay.get())), 1)
+        settings.idle_fix_delay = round(
+            max(MIN_IDLE_FIX_DELAY, min(MAX_IDLE_FIX_DELAY, delay.get())), 1
+        )
         if login.get() != settings.start_with_windows:
             settings.start_with_windows = login.get()
             try:
@@ -140,6 +165,86 @@ def run_settings() -> int:
     root.eval("tk::PlaceWindow . center")
     root.mainloop()
     return 0
+
+
+def _run_calibrate_dialog(parent: tk.Tk) -> CalibrationResult | None:
+    """Ask the user to type a sentence and return a delay, or None if cancelled."""
+    dialog = tk.Toplevel(parent)
+    dialog.title("Calibrate typing wait")
+    dialog.resizable(False, False)
+    dialog.transient(parent)
+    dialog.grab_set()
+
+    body = ttk.Frame(dialog, padding=16)
+    body.pack(fill=tk.BOTH, expand=True)
+
+    ttk.Label(body, text="Type this sentence at your usual speed:", font=("Segoe UI", 10)).pack(
+        anchor="w"
+    )
+    ttk.Label(body, text=CALIBRATE_SENTENCE, font=("Segoe UI", 12, "bold")).pack(
+        anchor="w", pady=(4, 10)
+    )
+    ttk.Label(
+        body,
+        text="Pauses between letters and words set how long the fixer waits.",
+        wraplength=420,
+    ).pack(anchor="w")
+
+    typed = tk.StringVar()
+    events: list[tuple[str, float]] = []
+    hint = tk.StringVar(value="")
+
+    entry = ttk.Entry(body, textvariable=typed, width=48, font=("Segoe UI", 12))
+    entry.pack(fill=tk.X, pady=(10, 4))
+    entry.focus_set()
+    tk.Label(body, textvariable=hint, wraplength=420, fg="#a00", anchor="w", justify="left").pack(
+        anchor="w"
+    )
+
+    def on_key(event: tk.Event) -> None:
+        hint.set("")
+        if event.keysym == "BackSpace":
+            if events:
+                events.pop()
+            return
+        if event.keysym == "Return":
+            finish()
+            return "break"
+        char = event.char or ""
+        if char and char.isprintable():
+            events.append((char, time.monotonic()))
+
+    def block_paste(_event: tk.Event) -> str:
+        hint.set("Type the words yourself so the pauses can be measured.")
+        return "break"
+
+    entry.bind("<KeyPress>", on_key)
+    entry.bind("<<Paste>>", block_paste)
+    entry.bind("<Control-v>", block_paste)
+    entry.bind("<Command-v>", block_paste)
+
+    result_holder: list = []
+
+    def finish() -> None:
+        try:
+            result_holder.append(delay_from_typing(events))
+        except CalibrationError as exc:
+            hint.set(str(exc))
+            return
+        dialog.destroy()
+
+    def cancel() -> None:
+        dialog.destroy()
+
+    buttons = ttk.Frame(body)
+    buttons.pack(fill=tk.X, pady=(12, 0))
+    ttk.Button(buttons, text="Use this typing", command=finish).pack(side=tk.LEFT, padx=(0, 8))
+    ttk.Button(buttons, text="Cancel", command=cancel).pack(side=tk.LEFT)
+
+    dialog.protocol("WM_DELETE_WINDOW", cancel)
+    parent.eval(f"tk::PlaceWindow {dialog} center")
+    dialog.wait_window()
+    return result_holder[0] if result_holder else None
 
 
 if __name__ == "__main__":

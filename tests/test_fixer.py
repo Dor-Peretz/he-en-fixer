@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 
+from he_en_fixer.calibrate import CalibrationError, delay_from_typing
 from he_en_fixer.detector import convert_document, fix_burst, suggest_auto, toggle_layout
 from he_en_fixer.layout_switch import language_for
 from he_en_fixer.mapping import en_to_he, he_to_en
@@ -90,6 +91,38 @@ class BurstTests(unittest.TestCase):
         self.assertEqual(language_for("he_to_en"), "en")
         self.assertEqual(language_for("en_to_he"), "he")
         self.assertIsNone(language_for("nonsense"))
+
+
+def _typed(text: str, letter: float, word: float) -> list[tuple[str, float]]:
+    stamp = 1.0
+    events: list[tuple[str, float]] = []
+    previous = ""
+    for char in text:
+        if events:
+            stamp += word if previous.isspace() or char.isspace() else letter
+        events.append((char, stamp))
+        previous = char
+    return events
+
+
+class CalibrationTests(unittest.TestCase):
+    def test_faster_typing_waits_less_than_slower_typing(self) -> None:
+        sentence = "the cat sat on the mat"
+        fast = delay_from_typing(_typed(sentence, letter=0.08, word=0.2))
+        slow = delay_from_typing(_typed(sentence, letter=0.25, word=0.9))
+        self.assertLess(fast.idle_fix_delay, slow.idle_fix_delay)
+        self.assertGreaterEqual(fast.idle_fix_delay, 0.3)
+        self.assertLessEqual(slow.idle_fix_delay, 3.0)
+
+    def test_needs_a_sentence_not_one_word(self) -> None:
+        with self.assertRaises(CalibrationError):
+            delay_from_typing(_typed("hello", letter=0.1, word=0.4))
+
+    def test_ignores_a_long_interruption(self) -> None:
+        events = _typed("the cat sat on the mat", letter=0.1, word=0.3)
+        events.insert(4, (" ", 100.0))
+        result = delay_from_typing(events)
+        self.assertLess(result.idle_fix_delay, 2.0)
 
 
 class InstallSafetyTests(unittest.TestCase):
