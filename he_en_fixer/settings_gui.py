@@ -19,6 +19,7 @@ from .calibrate import (
 )
 from .config import load_settings, save_settings
 from .icon import icon_ico_path, load_icon
+from .layouts import get_layout, language_choices
 from .paths import APP_NAME
 
 
@@ -66,10 +67,38 @@ def run_settings() -> int:
     enabled = tk.BooleanVar(value=settings.enabled)
     auto_fix = tk.BooleanVar(value=settings.auto_fix)
     switch_layout = tk.BooleanVar(value=settings.switch_layout)
-    he_to_en = tk.BooleanVar(value=settings.he_to_en)
-    en_to_he = tk.BooleanVar(value=settings.en_to_he)
+    lang_labels = {code: name for code, name in language_choices()}
+    code_by_label = {name: code for code, name in language_choices()}
+    language = tk.StringVar(value=lang_labels[settings.language])
+    other_to_en = tk.BooleanVar(value=settings.other_to_en)
+    en_to_other = tk.BooleanVar(value=settings.en_to_other)
     login = tk.BooleanVar(value=settings.start_with_windows)
     delay = tk.DoubleVar(value=settings.idle_fix_delay)
+
+    lang_box = ttk.LabelFrame(frame, text="Keyboard language (paired with English)", padding=10)
+    lang_box.pack(fill=tk.X, padx=24, pady=(4, 4))
+    lang_combo = ttk.Combobox(
+        lang_box,
+        textvariable=language,
+        values=[lang_labels[code] for code in lang_labels],
+        state="readonly",
+        width=24,
+    )
+    lang_combo.pack(anchor="w")
+
+    other_to_en_btn: ttk.Checkbutton
+    en_to_other_btn: ttk.Checkbutton
+
+    def _refresh_direction_labels() -> None:
+        code = code_by_label.get(language.get(), settings.language)
+        name = get_layout(code).display_name
+        other_to_en_btn.configure(text=f"{name} → English")
+        en_to_other_btn.configure(text=f"English → {name}")
+
+    def on_language_selected(_event: object = None) -> None:
+        _refresh_direction_labels()
+
+    lang_combo.bind("<<ComboboxSelected>>", on_language_selected)
 
     ttk.Checkbutton(frame, text="Fixer is on", variable=enabled).pack(anchor="w", padx=24)
     ttk.Checkbutton(
@@ -121,8 +150,11 @@ def run_settings() -> int:
 
     directions = ttk.LabelFrame(frame, text="Allowed corrections", padding=10)
     directions.pack(fill=tk.X, padx=24, pady=(10, 4))
-    ttk.Checkbutton(directions, text="Hebrew → English", variable=he_to_en).pack(anchor="w")
-    ttk.Checkbutton(directions, text="English → Hebrew", variable=en_to_he).pack(anchor="w")
+    other_to_en_btn = ttk.Checkbutton(directions, text="", variable=other_to_en)
+    other_to_en_btn.pack(anchor="w")
+    en_to_other_btn = ttk.Checkbutton(directions, text="", variable=en_to_other)
+    en_to_other_btn.pack(anchor="w")
+    _refresh_direction_labels()
 
     ttk.Checkbutton(frame, text="Start when I log in", variable=login).pack(
         anchor="w", padx=24, pady=(10, 0)
@@ -138,8 +170,9 @@ def run_settings() -> int:
         settings.enabled = enabled.get()
         settings.auto_fix = auto_fix.get()
         settings.switch_layout = switch_layout.get()
-        settings.he_to_en = he_to_en.get()
-        settings.en_to_he = en_to_he.get()
+        settings.language = code_by_label.get(language.get(), settings.language)
+        settings.other_to_en = other_to_en.get()
+        settings.en_to_other = en_to_other.get()
         settings.idle_fix_delay = round(
             max(MIN_IDLE_FIX_DELAY, min(MAX_IDLE_FIX_DELAY, delay.get())), 1
         )

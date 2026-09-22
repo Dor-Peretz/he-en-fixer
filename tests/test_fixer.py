@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import json
+import tempfile
 import unittest
+from pathlib import Path
+from unittest import mock
 
 from he_en_fixer.calibrate import CalibrationError, delay_from_typing
+from he_en_fixer.config import Settings, load_settings, save_settings
 from he_en_fixer.detector import convert_document, fix_burst, suggest_auto, toggle_layout
 from he_en_fixer.layout_switch import language_for
-from he_en_fixer.mapping import en_to_he, he_to_en
+from he_en_fixer.layouts import get_layout
+from he_en_fixer.mapping import en_to_he, en_to_other, he_to_en, other_to_en
 from he_en_fixer.paths import install_dir
 
 
@@ -154,9 +160,69 @@ class BurstTests(unittest.TestCase):
         self.assertEqual(fix_burst("I need to cut this").text, "I need to cut this")
 
     def test_language_for_direction(self) -> None:
-        self.assertEqual(language_for("he_to_en"), "en")
-        self.assertEqual(language_for("en_to_he"), "he")
-        self.assertIsNone(language_for("nonsense"))
+        self.assertEqual(language_for("he_to_en", language="he"), "en")
+        self.assertEqual(language_for("en_to_he", language="he"), "he")
+        self.assertIsNone(language_for("nonsense", language="he"))
+
+
+class RussianMappingTests(unittest.TestCase):
+    def test_hello_roundtrip(self) -> None:
+        gibberish = en_to_other("hello", "ru")
+        self.assertEqual(gibberish, "руддщ")
+        self.assertEqual(other_to_en(gibberish, "ru"), "hello")
+
+
+class ArabicMappingTests(unittest.TestCase):
+    def test_hello_roundtrip(self) -> None:
+        gibberish = en_to_other("hello", "ar")
+        self.assertEqual(other_to_en(gibberish, "ar"), "hello")
+
+
+class MultiLanguageDetectorTests(unittest.TestCase):
+    def test_russian_gibberish_to_english(self) -> None:
+        suggestion = suggest_auto("руддщ", language="ru")
+        self.assertIsNotNone(suggestion)
+        assert suggestion is not None
+        self.assertEqual(suggestion.replacement, "hello")
+        self.assertEqual(suggestion.direction, "ru_to_en")
+
+    def test_arabic_gibberish_to_english(self) -> None:
+        gibberish = en_to_other("hello", "ar")
+        suggestion = suggest_auto(gibberish, language="ar")
+        self.assertIsNotNone(suggestion)
+        assert suggestion is not None
+        self.assertEqual(suggestion.replacement, "hello")
+        self.assertEqual(suggestion.direction, "ar_to_en")
+
+    def test_pair_isolation_hebrew_not_fixed_as_arabic(self) -> None:
+        self.assertIsNone(suggest_auto("יקךךם", language="ar"))
+
+    def test_language_for_russian_and_arabic(self) -> None:
+        self.assertEqual(language_for("ru_to_en", language="ru"), "en")
+        self.assertEqual(language_for("en_to_ru", language="ru"), "ru")
+        self.assertEqual(language_for("ar_to_en", language="ar"), "en")
+        self.assertEqual(language_for("en_to_ar", language="ar"), "ar")
+
+
+class SettingsMigrationTests(unittest.TestCase):
+    def test_legacy_direction_flags_map_to_generic(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "settings.json"
+            path.write_text(
+                json.dumps({"he_to_en": False, "en_to_he": True}) + "\n",
+                encoding="utf-8",
+            )
+            with mock.patch("he_en_fixer.config.SETTINGS_PATH", path), mock.patch(
+                "he_en_fixer.config.APP_DIR", Path(tmp)
+            ):
+                settings = load_settings()
+        self.assertFalse(settings.other_to_en)
+        self.assertTrue(settings.en_to_other)
+        self.assertEqual(settings.language, "he")
+
+    def test_missing_language_defaults_to_hebrew(self) -> None:
+        settings = Settings()
+        self.assertEqual(settings.language, "he")
 
 
 def _typed(text: str, letter: float, word: float) -> list[tuple[str, float]]:

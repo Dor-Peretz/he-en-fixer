@@ -14,6 +14,7 @@ from . import startup
 from .config import SETTINGS_PATH, Settings, load_settings, save_settings
 from .hook import KeyboardFixer
 from .icon import tray_icon
+from .layouts import get_layout, language_choices
 from .paths import is_frozen, project_root
 
 if sys.platform == "darwin":
@@ -37,46 +38,70 @@ class TrayApp:
             "he-en-fixer",
             tray_icon(settings.enabled),
             self._title(),
-            menu=pystray.Menu(
-                pystray.MenuItem(
-                    "Fixer is on",
-                    self._toggle_enabled,
-                    checked=lambda _: self.settings.enabled,
-                ),
-                pystray.MenuItem(
-                    "Auto-fix when I stop typing",
-                    self._toggle_auto,
-                    checked=lambda _: self.settings.auto_fix,
-                ),
-                pystray.MenuItem(
-                    "Switch keyboard language after a fix",
-                    self._toggle_switch_layout,
-                    checked=lambda _: self.settings.switch_layout,
-                ),
-                pystray.Menu.SEPARATOR,
-                pystray.MenuItem(
-                    "Hebrew → English",
-                    self._toggle_he_to_en,
-                    checked=lambda _: self.settings.he_to_en,
-                ),
-                pystray.MenuItem(
-                    "English → Hebrew",
-                    self._toggle_en_to_he,
-                    checked=lambda _: self.settings.en_to_he,
-                ),
-                pystray.Menu.SEPARATOR,
-                pystray.MenuItem(
-                    "Start when I log in",
-                    self._toggle_startup,
-                    checked=lambda _: self.settings.start_with_windows,
-                ),
-                pystray.MenuItem(_hotkey_hint(), self._noop, enabled=False),
-                pystray.Menu.SEPARATOR,
-                pystray.MenuItem("Settings…", self._open_settings),
-                pystray.MenuItem("Install / Uninstall…", self._open_installer),
-                pystray.MenuItem("Quit", self._quit),
-            ),
+            menu=self._make_menu(),
         )
+
+    def _direction_labels(self) -> tuple[str, str]:
+        name = get_layout(self.settings.language).display_name
+        return (f"{name} → English", f"English → {name}")
+
+    def _make_menu(self) -> pystray.Menu:
+        other_to_en_label, en_to_other_label = self._direction_labels()
+        language_menu = pystray.Menu(
+            *[
+                pystray.MenuItem(
+                    label,
+                    self._set_language,
+                    checked=lambda _item, code=code: self.settings.language == code,
+                    radio=True,
+                )
+                for code, label in language_choices()
+            ]
+        )
+        return pystray.Menu(
+            pystray.MenuItem(
+                "Fixer is on",
+                self._toggle_enabled,
+                checked=lambda _: self.settings.enabled,
+            ),
+            pystray.MenuItem(
+                "Auto-fix when I stop typing",
+                self._toggle_auto,
+                checked=lambda _: self.settings.auto_fix,
+            ),
+            pystray.MenuItem(
+                "Switch keyboard language after a fix",
+                self._toggle_switch_layout,
+                checked=lambda _: self.settings.switch_layout,
+            ),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem("Keyboard language", language_menu),
+            pystray.MenuItem(
+                other_to_en_label,
+                self._toggle_other_to_en,
+                checked=lambda _: self.settings.other_to_en,
+            ),
+            pystray.MenuItem(
+                en_to_other_label,
+                self._toggle_en_to_other,
+                checked=lambda _: self.settings.en_to_other,
+            ),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem(
+                "Start when I log in",
+                self._toggle_startup,
+                checked=lambda _: self.settings.start_with_windows,
+            ),
+            pystray.MenuItem(_hotkey_hint(), self._noop, enabled=False),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem("Settings…", self._open_settings),
+            pystray.MenuItem("Install / Uninstall…", self._open_installer),
+            pystray.MenuItem("Quit", self._quit),
+        )
+
+    def _refresh_menu(self) -> None:
+        self.icon.menu = self._make_menu()
+        self.icon.update_menu()
 
     def run(self) -> None:
         if self.settings.start_with_windows and not startup.is_enabled():
@@ -94,13 +119,11 @@ class TrayApp:
         if tray_macos is None:
             return
         tray_macos.pin_menu_bar_position(icon)
-        # The slot is assigned on the main thread, so let it settle before checking.
         time.sleep(0.5)
         if tray_macos.is_hidden_behind_notch(icon):
             self._warn_icon_hidden()
 
     def _refresh_icon(self) -> None:
-        """Keep the tray image and tooltip showing whether the fixer is on."""
         image = tray_icon(self.settings.enabled)
         self.icon.title = self._title()
         if tray_macos is not None and tray_macos.set_menu_bar_image(self.icon, image):
@@ -118,7 +141,6 @@ class TrayApp:
             return
 
     def _watch_settings(self) -> None:
-        """Pick up changes made by the settings window, which runs as its own process."""
         last = self._settings_mtime()
         while not self._stop_watch.wait(1.0):
             current = self._settings_mtime()
@@ -129,10 +151,9 @@ class TrayApp:
                 fresh = load_settings()
             except Exception:
                 continue
-            # Mutated in place so the running hook sees the new values.
             for field in fields(Settings):
                 setattr(self.settings, field.name, getattr(fresh, field.name))
-            self.icon.update_menu()
+            self._refresh_menu()
             self._refresh_icon()
 
     @staticmethod
@@ -144,7 +165,7 @@ class TrayApp:
 
     def _persist(self) -> None:
         save_settings(self.settings)
-        self.icon.update_menu()
+        self._refresh_menu()
         self._refresh_icon()
 
     def _toggle_enabled(self, _icon=None, _item=None) -> None:
@@ -159,13 +180,23 @@ class TrayApp:
         self.settings.switch_layout = not self.settings.switch_layout
         self._persist()
 
-    def _toggle_he_to_en(self, _icon=None, _item=None) -> None:
-        self.settings.he_to_en = not self.settings.he_to_en
+    def _toggle_other_to_en(self, _icon=None, _item=None) -> None:
+        self.settings.other_to_en = not self.settings.other_to_en
         self._persist()
 
-    def _toggle_en_to_he(self, _icon=None, _item=None) -> None:
-        self.settings.en_to_he = not self.settings.en_to_he
+    def _toggle_en_to_other(self, _icon=None, _item=None) -> None:
+        self.settings.en_to_other = not self.settings.en_to_other
         self._persist()
+
+    def _set_language(self, _icon, item) -> None:
+        selected = getattr(item, "text", None)
+        if not selected:
+            return
+        for lang_code, label in language_choices():
+            if label == selected:
+                self.settings.language = lang_code
+                self._persist()
+                return
 
     def _toggle_startup(self, _icon=None, _item=None) -> None:
         self.settings.start_with_windows = not self.settings.start_with_windows

@@ -4,7 +4,7 @@
 
 <h1 align="center">HE↔EN Fixer</h1>
 
-<p align="center">A local tray app for Windows and Mac that fixes the classic mistake: you meant <strong>English</strong>, but the keyboard was still on <strong>Hebrew</strong> — or the other way around.</p>
+<p align="center">A local tray app for Windows and Mac that fixes the classic mistake: you meant <strong>English</strong>, but the keyboard was still on <strong>Hebrew</strong>, <strong>Arabic</strong>, or <strong>Russian</strong> — or the other way around.</p>
 
 Example: Hebrew layout is on, you type `hello`, the screen shows `יקךךם`. A moment after you stop typing, the app rewrites it to `hello` and switches your keyboard to English, so you can keep going.
 
@@ -79,7 +79,7 @@ Right-click the tray icon to:
 - Turn the fixer on or off
 - Turn auto-fix on or off
 - Turn the keyboard-language switch on or off
-- Allow only Hebrew → English, only English → Hebrew, or both
+- Choose your keyboard language (Hebrew by default, or Arabic / Russian) and allow only that language → English, only English → that language, or both
 - Start when you log in
 - Open **Settings…** or the install / uninstall window
 - Quit
@@ -98,12 +98,18 @@ Tray icon → **Settings…** opens a small window for everything you can tune:
 | Fix what I typed when I stop typing | Turns auto-fix off without stopping the app |
 | How long to wait | Pause length before a fix runs, from 0.3 to 3 seconds (default 1.2). **Calibrate from my typing…** times the gaps between your letters and words and sets this for you. |
 | Switch my keyboard… | Change the input language after a correction |
-| Allowed corrections | Hebrew → English, English → Hebrew, or both |
+| Keyboard language | Hebrew (default), Arabic 101, or Russian ЙЦУКЕН — each paired with English |
+| Allowed corrections | Your language → English, English → your language, or both |
 | Start when I log in | Launch the app at login |
 
 Saving applies immediately — the running app picks the change up, so there is no need to restart it.
 
+Arabic uses the common **Arabic 101** PC layout; Russian uses standard **ЙЦУКЕН**. Phonetic or national variants may not match key-for-key.
+
 Settings are stored as plain JSON, if you prefer editing by hand:
+
+- `language`: `he` (default), `ar`, or `ru`
+- `other_to_en` / `en_to_other`: direction toggles (older installs may still have `he_to_en` / `en_to_he`)
 
 - Windows: `%APPDATA%\he-en-fixer\settings.json`
 - Mac: `~/Library/Application Support/he-en-fixer/settings.json`

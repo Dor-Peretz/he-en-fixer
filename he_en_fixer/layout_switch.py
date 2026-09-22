@@ -4,13 +4,22 @@ from __future__ import annotations
 
 import sys
 
+from .layouts import get_layout
+
 # Matched as prefixes, so Hebrew-QWERTY and ABC-QWERTZ variants count too.
 _MAC_SOURCES = {
     "en": ("com.apple.keylayout.ABC", "com.apple.keylayout.US"),
     "he": ("com.apple.keylayout.Hebrew",),
+    "ar": ("com.apple.keylayout.Arabic",),
+    "ru": ("com.apple.keylayout.Russian",),
 }
 
-_WIN_LAYOUTS = {"en": "00000409", "he": "0000040D"}
+_WIN_LAYOUTS = {
+    "en": "00000409",
+    "he": "0000040D",
+    "ar": "00000401",
+    "ru": "00000419",
+}
 
 
 if sys.platform == "darwin":
@@ -110,8 +119,13 @@ else:
         return False
 
 
-def language_for(direction: str) -> str | None:
+def language_for(direction: str, *, language: str | None = None) -> str | None:
     """The language the user meant to type, given the correction that was applied."""
+    layout = get_layout(language)
+    target = layout.target_lang_for_direction(direction)
+    if target is not None:
+        return target
+    # Legacy direction strings from older sessions.
     if direction == "he_to_en":
         return "en"
     if direction == "en_to_he":

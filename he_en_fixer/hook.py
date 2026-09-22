@@ -14,6 +14,7 @@ from . import injector, layout_switch
 from .config import Settings
 from .detector import convert_document, fix_burst, toggle_layout
 from .layout_input import char_from_vk
+from .layouts import get_layout
 from .mapping import dominant_script
 
 # Typed alongside words, so they stay in the burst instead of ending it.
@@ -208,8 +209,9 @@ class KeyboardFixer:
 
         result = fix_burst(
             typed,
-            he_to_en_enabled=self.settings.he_to_en,
-            en_to_he_enabled=self.settings.en_to_he,
+            language=self.settings.language,
+            other_to_en_enabled=self.settings.other_to_en,
+            en_to_other_enabled=self.settings.en_to_other,
         )
         if result.text == typed or result.direction is None:
             return
@@ -221,7 +223,9 @@ class KeyboardFixer:
             time.sleep(0.02)
             self.injecting = False
 
-        self._switch_language(layout_switch.language_for(result.direction))
+        self._switch_language(
+            layout_switch.language_for(result.direction, language=self.settings.language)
+        )
         if self.on_fix:
             self.on_fix(result.text, "")
 
@@ -239,7 +243,7 @@ class KeyboardFixer:
             word = "".join(self.buffer)
             self.buffer.clear()
         if word:
-            converted = toggle_layout(word)
+            converted = toggle_layout(word, language=self.settings.language)
             if converted == word:
                 return
             self.injecting = True
@@ -251,7 +255,12 @@ class KeyboardFixer:
             finally:
                 time.sleep(0.02)
                 self.injecting = False
-            self._switch_language("en" if dominant_script(word) == "he" else "he")
+            layout = get_layout(self.settings.language)
+            script = dominant_script(word, language=self.settings.language)
+            if script == layout.code:
+                self._switch_language("en")
+            elif script == "en":
+                self._switch_language(layout.code)
             if self.on_fix:
                 self.on_fix(converted, "")
             return
@@ -268,8 +277,9 @@ class KeyboardFixer:
                 return
             converted = convert_document(
                 selected,
-                he_to_en_enabled=self.settings.he_to_en,
-                en_to_he_enabled=self.settings.en_to_he,
+                language=self.settings.language,
+                other_to_en_enabled=self.settings.other_to_en,
+                en_to_other_enabled=self.settings.en_to_other,
                 force=True,
             )
             if converted == selected:

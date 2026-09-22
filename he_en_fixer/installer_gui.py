@@ -47,7 +47,7 @@ def run_installer() -> int:
     ttk.Label(titles, text=APP_NAME, font=("Segoe UI", 18, "bold")).pack(anchor="w")
     ttk.Label(
         titles,
-        text="Hebrew ↔ English keyboard fixer",
+        text="English keyboard fixer (Hebrew, Arabic, or Russian)",
         font=("Segoe UI", 10),
     ).pack(anchor="w")
 
