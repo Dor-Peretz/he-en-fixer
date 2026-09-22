@@ -12,6 +12,10 @@ Real words are left alone. `שלום` and `אם` stay Hebrew. `hello` and `to` s
 
 The app runs only on your computer. It does not send your typing to the internet.
 
+<p align="center">
+  <img src="docs/demo.gif" alt="Demo: typed on the Hebrew layout as יקךךם, then auto-fixed to hello">
+</p>
+
 ---
 
 ## Install (one click)
