@@ -82,7 +82,7 @@ class DetectorTests(unittest.TestCase):
 
     def test_fixes_english_typed_with_a_geresh(self) -> None:
         result = fix_burst("\u05f3שמא אם \u05f3םרלד")
-        self.assertEqual(result.text, "want אם works")
+        self.assertEqual(result.text, "want to works")
         self.assertEqual(result.direction, "he_to_en")
 
     def test_fixes_english_gibberish_to_hebrew_word_with_a_geresh(self) -> None:
@@ -100,9 +100,13 @@ class DetectorTests(unittest.TestCase):
         text = "יקךךם 'םרךג"
         self.assertEqual(convert_document(text), "hello world")
 
-    def test_convert_document_leaves_bilingual_words(self) -> None:
-        self.assertEqual(convert_document("אם כשבא יקךךם"), "אם כשבא hello")
-        self.assertEqual(convert_document("to fact akuo"), "to fact שלום")
+    def test_convert_document_settles_bilingual_words_from_neighbours(self) -> None:
+        self.assertEqual(convert_document("אם כשבא יקךךם"), "to fact hello")
+        self.assertEqual(convert_document("to fact akuo"), "אם כשבא שלום")
+
+    def test_convert_document_leaves_bilingual_words_without_certain_neighbours(self) -> None:
+        self.assertEqual(convert_document("אם כשבא"), "אם כשבא")
+        self.assertEqual(convert_document("to fact"), "to fact")
 
 
 class BurstTests(unittest.TestCase):
@@ -123,6 +127,31 @@ class BurstTests(unittest.TestCase):
         # Two Hebrew-layout words, one English-layout word.
         result = fix_burst("יקךךם 'םרךג akuo")
         self.assertEqual(result.direction, "he_to_en")
+
+    def test_bilingual_words_follow_their_wrong_layout_neighbours(self) -> None:
+        # "cut" (בוא) and "to" (אם) are real either way, so only the neighbours say
+        # that the whole sentence was meant to be Hebrew.
+        result = fix_burst("cut brtv to zv gucs")
+        self.assertEqual(result.text, "בוא נראה אם זה עובד")
+        self.assertEqual(result.direction, "en_to_he")
+
+    def test_bilingual_words_follow_a_single_neighbour(self) -> None:
+        self.assertEqual(fix_burst("שלום cut").text, "שלום בוא")
+        self.assertEqual(fix_burst("אם כשבא יקךךם").text, "to fact hello")
+
+    def test_the_nearest_neighbour_wins(self) -> None:
+        # "need" and "fix" are English only and sit next to "to", while the one
+        # Hebrew word is further away, so "to" stays English.
+        self.assertEqual(fix_burst("we need to fix zv").text, "we need to fix זה")
+
+    def test_bilingual_words_stay_on_a_language_boundary(self) -> None:
+        # One neighbour points each way, so "to" has nothing to follow.
+        self.assertEqual(fix_burst("יקךךם to akuo").text, "hello to שלום")
+        self.assertEqual(fix_burst("אני עובד עם google אם אפשר").text, "אני עובד עם google אם אפשר")
+
+    def test_bilingual_words_stay_without_certain_neighbours(self) -> None:
+        self.assertEqual(fix_burst("to do go so").text, "to do go so")
+        self.assertEqual(fix_burst("I need to cut this").text, "I need to cut this")
 
     def test_language_for_direction(self) -> None:
         self.assertEqual(language_for("he_to_en"), "en")
