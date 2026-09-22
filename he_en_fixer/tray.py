@@ -5,6 +5,7 @@ from __future__ import annotations
 import subprocess
 import sys
 import threading
+import time
 from dataclasses import fields
 
 import pystray
@@ -12,8 +13,13 @@ import pystray
 from . import startup
 from .config import SETTINGS_PATH, Settings, load_settings, save_settings
 from .hook import KeyboardFixer
-from .icon import load_icon
+from .icon import tray_icon
 from .paths import is_frozen, project_root
+
+if sys.platform == "darwin":
+    from . import tray_macos
+else:
+    tray_macos = None
 
 
 def _hotkey_hint() -> str:
@@ -29,11 +35,11 @@ class TrayApp:
         self._stop_watch = threading.Event()
         self.icon = pystray.Icon(
             "he-en-fixer",
-            load_icon(64),
-            "HE↔EN Fixer",
+            tray_icon(settings.enabled),
+            self._title(),
             menu=pystray.Menu(
                 pystray.MenuItem(
-                    "Enabled",
+                    "Fixer is on",
                     self._toggle_enabled,
                     checked=lambda _: self.settings.enabled,
                 ),
@@ -77,7 +83,39 @@ class TrayApp:
             startup.set_enabled(True)
         self.fixer.start()
         threading.Thread(target=self._watch_settings, daemon=True).start()
-        self.icon.run()
+        self.icon.run(setup=self._on_ready)
+
+    def _title(self) -> str:
+        return "HE↔EN Fixer — on" if self.settings.enabled else "HE↔EN Fixer — off"
+
+    def _on_ready(self, icon) -> None:
+        icon.visible = True
+        self._refresh_icon()
+        if tray_macos is None:
+            return
+        tray_macos.pin_menu_bar_position(icon)
+        # The slot is assigned on the main thread, so let it settle before checking.
+        time.sleep(0.5)
+        if tray_macos.is_hidden_behind_notch(icon):
+            self._warn_icon_hidden()
+
+    def _refresh_icon(self) -> None:
+        """Keep the tray image and tooltip showing whether the fixer is on."""
+        image = tray_icon(self.settings.enabled)
+        self.icon.title = self._title()
+        if tray_macos is not None and tray_macos.set_menu_bar_image(self.icon, image):
+            return
+        self.icon.icon = image
+
+    def _warn_icon_hidden(self) -> None:
+        try:
+            self.icon.notify(
+                "HE↔EN Fixer is running, but your menu bar is full, so macOS hides "
+                "its icon behind the camera notch. Remove a menu bar icon to see it.",
+                "HE↔EN Fixer",
+            )
+        except Exception:
+            return
 
     def _watch_settings(self) -> None:
         """Pick up changes made by the settings window, which runs as its own process."""
@@ -95,6 +133,7 @@ class TrayApp:
             for field in fields(Settings):
                 setattr(self.settings, field.name, getattr(fresh, field.name))
             self.icon.update_menu()
+            self._refresh_icon()
 
     @staticmethod
     def _settings_mtime() -> float:
@@ -106,6 +145,7 @@ class TrayApp:
     def _persist(self) -> None:
         save_settings(self.settings)
         self.icon.update_menu()
+        self._refresh_icon()
 
     def _toggle_enabled(self, _icon=None, _item=None) -> None:
         self.settings.enabled = not self.settings.enabled

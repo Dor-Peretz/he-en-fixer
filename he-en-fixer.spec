@@ -28,7 +28,12 @@ hidden = (
 if sys.platform == "win32":
     hidden += ["pynput.keyboard._win32", "pynput.mouse._win32", "pystray._win32"]
 elif sys.platform == "darwin":
-    hidden += ["pynput.keyboard._darwin", "pynput.mouse._darwin", "pystray._darwin"]
+    hidden += [
+        "pynput.keyboard._darwin",
+        "pynput.mouse._darwin",
+        "pystray._darwin",
+        "he_en_fixer.tray_macos",
+    ]
 
 a = Analysis(
     ["main.py"],

@@ -52,6 +52,8 @@ That copies the app into your user folder and can add a desktop shortcut.
 
 After install, the tray icon above appears in the system tray. Leave it running while you type.
 
+On a Mac the icon sits in the menu bar as **Aא**: solid while the fixer is on, crossed out while it is off. If the icon is missing, the app is not running.
+
 **Auto-fix waits until you stop typing.** Nothing changes while your fingers are moving. About a second after your last keystroke, everything you just typed is corrected at once, and your keyboard switches to the language you meant to be typing in.
 
 Two things to know:
