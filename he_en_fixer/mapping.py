@@ -54,6 +54,17 @@ HE_TO_EN.update(
     }
 )
 
+# Hebrew Standard (Windows) and macOS Hebrew put the punctuation geresh on the
+# W key and gershayim on Shift+W, where the legacy layout emits ' and ".
+GERESH = "\u05f3"
+GERSHAYIM = "\u05f4"
+HE_TO_EN.update(
+    {
+        GERESH: "w",
+        GERSHAYIM: "W",
+    }
+)
+
 HEBREW_LETTERS = frozenset("אבגדהוזחטיכלמנסעפצקרשתךםןףץ")
 LATIN_LETTERS = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 

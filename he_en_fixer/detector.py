@@ -6,7 +6,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 
-from .mapping import dominant_script, en_to_he, he_to_en, script_counts
+from .mapping import GERESH, GERSHAYIM, dominant_script, en_to_he, he_to_en, script_counts
 
 try:
     from wordfreq import zipf_frequency
@@ -32,15 +32,23 @@ class Suggestion:
     replacement_score: float
 
 
+# Word lists spell ג'ינס with an ASCII apostrophe, not the Hebrew geresh.
+_QUOTE_NORMALISATION = str.maketrans({GERESH: "'", GERSHAYIM: '"'})
+
+
 def _zipf(word: str, lang: str) -> float:
-    cleaned = word.strip().lower()
+    cleaned = word.strip().lower().translate(_QUOTE_NORMALISATION)
     if not cleaned:
+        return 0.0
+    # Neither language starts a word with a quote, but wordfreq drops a leading
+    # one and scores the rest, which makes 'שמא (want) look like a real word.
+    if cleaned[0] in "'\"":
         return 0.0
     return float(zipf_frequency(cleaned, lang))
 
 
 def _letters_only(text: str) -> str:
-    return "".join(ch for ch in text if ch.isalpha() or ch in "'")
+    return "".join(ch for ch in text if ch.isalpha() or ch in ("'", GERESH, GERSHAYIM))
 
 
 def _looks_like_word(score: float) -> bool:

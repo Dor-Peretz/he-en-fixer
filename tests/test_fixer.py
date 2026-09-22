@@ -29,6 +29,10 @@ class MappingTests(unittest.TestCase):
     def test_preserves_latin_case_in_hebrew_to_english(self) -> None:
         self.assertEqual(he_to_en("Hקךךם"), "Hello")
 
+    def test_hebrew_standard_geresh_maps_to_w(self) -> None:
+        self.assertEqual(he_to_en("\u05f3םרלד"), "works")
+        self.assertEqual(he_to_en("\u05f4שמא"), "Want")
+
 
 class DetectorTests(unittest.TestCase):
     def test_auto_fixes_hebrew_gibberish_to_english(self) -> None:
@@ -75,6 +79,18 @@ class DetectorTests(unittest.TestCase):
         assert suggestion is not None
         self.assertEqual(suggestion.replacement, "שלום")
         self.assertEqual(suggestion.direction, "en_to_he")
+
+    def test_fixes_english_typed_with_a_geresh(self) -> None:
+        result = fix_burst("\u05f3שמא אם \u05f3םרלד")
+        self.assertEqual(result.text, "want אם works")
+        self.assertEqual(result.direction, "he_to_en")
+
+    def test_fixes_english_gibberish_to_hebrew_word_with_a_geresh(self) -> None:
+        self.assertEqual(fix_burst("mwhpx").text, "צ'יפס")
+
+    def test_does_not_replace_real_hebrew_with_a_geresh(self) -> None:
+        self.assertIsNone(suggest_auto("ג'ינס"))
+        self.assertIsNone(suggest_auto("ג\u05f3ינס"))
 
     def test_toggle_is_reversible(self) -> None:
         self.assertEqual(toggle_layout("יקךךם"), "hello")
