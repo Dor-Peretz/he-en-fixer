@@ -2,13 +2,20 @@
 set -e
 cd "$(dirname "$0")"
 
-if [ -d "HE-EN Fixer.app" ]; then
-  open "HE-EN Fixer.app" --args --setup
-  exit 0
+APP="HE-EN Fixer.app"
+
+if [ -d "$APP" ]; then
+  # Files extracted from a downloaded zip inherit its quarantine flag. Once the
+  # user has approved this installer, clear that flag from the bundled app so
+  # macOS does not block the installer window or the installed copy again.
+  /usr/bin/xattr -dr com.apple.quarantine "$APP" 2>/dev/null || true
+  if open "$APP" --args --setup; then
+    exit 0
+  fi
 fi
 
-if [ -x "HE-EN Fixer.app/Contents/MacOS/HE-EN Fixer" ]; then
-  "HE-EN Fixer.app/Contents/MacOS/HE-EN Fixer" --setup
+if [ -x "$APP/Contents/MacOS/HE-EN Fixer" ]; then
+  "$APP/Contents/MacOS/HE-EN Fixer" --setup
   exit 0
 fi
 

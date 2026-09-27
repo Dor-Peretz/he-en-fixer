@@ -9,6 +9,7 @@ from unittest import mock
 from he_en_fixer.calibrate import CalibrationError, delay_from_typing
 from he_en_fixer.config import Settings, load_settings, save_settings
 from he_en_fixer.detector import convert_document, fix_burst, suggest_auto, toggle_layout
+from he_en_fixer.install import _copy_frozen, _mac_app_bundle
 from he_en_fixer.layout_switch import language_for
 from he_en_fixer.layouts import get_layout
 from he_en_fixer.mapping import en_to_he, en_to_other, he_to_en, other_to_en
@@ -265,6 +266,47 @@ class InstallSafetyTests(unittest.TestCase):
         dest = install_dir().resolve()
         self.assertEqual(dest.anchor, home.anchor)
         self.assertTrue(dest.is_relative_to(home))
+
+    def test_finds_containing_macos_app_bundle(self) -> None:
+        executable = Path(
+            "/tmp/HE-EN Fixer.app/Contents/MacOS/HE-EN Fixer"
+        )
+        self.assertEqual(
+            _mac_app_bundle(executable),
+            Path("/tmp/HE-EN Fixer.app"),
+        )
+
+    def test_non_bundle_executable_has_no_macos_app(self) -> None:
+        self.assertIsNone(_mac_app_bundle(Path("/tmp/HE-EN Fixer")))
+
+    def test_macos_frozen_install_copies_the_complete_app_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            app = root / "source" / "HE-EN Fixer.app"
+            executable = app / "Contents" / "MacOS" / "HE-EN Fixer"
+            framework = app / "Contents" / "Frameworks" / "library.dylib"
+            executable.parent.mkdir(parents=True)
+            framework.parent.mkdir(parents=True)
+            executable.write_text("executable")
+            framework.write_text("framework")
+            destination = root / "installed"
+            destination.mkdir()
+
+            with (
+                mock.patch("he_en_fixer.install.sys.platform", "darwin"),
+                mock.patch("he_en_fixer.install.sys.executable", str(executable)),
+            ):
+                _copy_frozen(destination, None)
+
+            installed_app = destination / "HE-EN Fixer.app"
+            self.assertEqual(
+                (installed_app / "Contents" / "MacOS" / "HE-EN Fixer").read_text(),
+                "executable",
+            )
+            self.assertEqual(
+                (installed_app / "Contents" / "Frameworks" / "library.dylib").read_text(),
+                "framework",
+            )
 
 
 if __name__ == "__main__":

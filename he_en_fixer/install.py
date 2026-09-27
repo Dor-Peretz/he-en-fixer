@@ -142,6 +142,16 @@ def _launcher_name() -> str:
 
 
 def _copy_frozen(dest: Path, progress) -> None:
+    if sys.platform == "darwin":
+        bundle = _mac_app_bundle(Path(sys.executable))
+        if bundle is not None:
+            target = dest / bundle.name
+            _log(progress, "Copying application bundle")
+            if target.exists():
+                shutil.rmtree(target)
+            shutil.copytree(bundle, target, symlinks=True)
+            return
+
     source = Path(sys.executable).resolve().parent
     _log(progress, "Copying application files")
     for item in source.iterdir():
@@ -152,6 +162,15 @@ def _copy_frozen(dest: Path, progress) -> None:
             shutil.copytree(item, target, ignore=shutil.ignore_patterns(*SKIP_NAMES))
         else:
             shutil.copy2(item, target)
+
+
+def _mac_app_bundle(executable: Path) -> Path | None:
+    """Return the containing .app without resolving its bundle path away."""
+    path = executable.absolute()
+    for parent in path.parents:
+        if parent.suffix == ".app":
+            return parent
+    return None
 
 
 def _copy_source(dest: Path, progress) -> None:

@@ -67,6 +67,11 @@ def launch_target() -> tuple[str, str, str]:
         if pythonw.exists() and script.exists():
             return str(pythonw), f'"{script}"', str(installed)
     else:
+        app_executable = (
+            installed / f"{APP_NAME}.app" / "Contents" / "MacOS" / APP_NAME
+        )
+        if sys.platform == "darwin" and app_executable.exists():
+            return str(app_executable), "", str(installed)
         frozen = installed / APP_NAME
         if frozen.exists():
             return str(frozen), "", str(installed)

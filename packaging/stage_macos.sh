@@ -12,6 +12,12 @@ if [ ! -d "$BUILT" ]; then
   echo "Build output missing" >&2
   exit 1
 fi
+
+# PyInstaller normally ad-hoc signs its output. Sign the finished bundle again
+# and verify every nested binary so the zip never ships a malformed app.
+codesign --force --deep --sign - "$BUILT"
+codesign --verify --deep --strict "$BUILT"
+
 rm -rf "$STAGE"
 mkdir -p "$STAGE"
 cp -R "$BUILT" "$STAGE/HE-EN Fixer.app"
@@ -27,6 +33,8 @@ HE-EN Fixer
 2. Click Install
 3. Allow Accessibility in System Settings → Privacy & Security
 4. Click Open app
+
+If macOS blocks Install.command, Control-click it and choose Open once.
 
 This installs only for your Mac user account.
 It does not need an administrator password for the copy into your home folder.
